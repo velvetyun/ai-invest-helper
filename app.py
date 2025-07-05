@@ -1,51 +1,43 @@
 import streamlit as st
 import yfinance as yf
-import plotly.graph_objects as go
 import pandas as pd
+import plotly.graph_objects as go
 
-st.set_page_config(page_title="AI 投資助手 v7.5.1", layout="wide")
-st.title("📊 BTC 互動式 K 線圖（TradingView 風格）")
+st.set_page_config(layout="wide")
+st.title("📈 BTC K線圖（TradingView風格）")
+st.caption("資料來源：Yahoo Finance（BTC-USD），K線 + EMA10/EMA20 + 成交量")
 
-# 抓取 BTC-USD 的 1 小時 K 線資料
-symbol = st.selectbox("選擇標的", ["BTC-USD", "ETH-USD", "AAPL", "2330.TW"])
-data = yf.download(symbol, period="7d", interval="1h")
+# 抓取資料
+ticker = "BTC-USD"
+data = yf.download(ticker, period="7d", interval="1h")
+data["EMA10"] = data["Close"].ewm(span=10, adjust=False).mean()
+data["EMA20"] = data["Close"].ewm(span=20, adjust=False).mean()
 
-# 計算 EMA10 / EMA20
-data["EMA10"] = data["Close"].ewm(span=10).mean()
-data["EMA20"] = data["Close"].ewm(span=20).mean()
-
-# 建立 K 線圖
+# 畫圖
 fig = go.Figure()
 
 fig.add_trace(go.Candlestick(
     x=data.index,
-    open=data['Open'],
-    high=data['High'],
-    low=data['Low'],
-    close=data['Close'],
-    name='K線',
-    increasing_line_color='green',
-    decreasing_line_color='red'
+    open=data["Open"],
+    high=data["High"],
+    low=data["Low"],
+    close=data["Close"],
+    name="K線"
 ))
 
-# 加入 EMA 線
-fig.add_trace(go.Scatter(x=data.index, y=data["EMA10"], line=dict(color='blue', width=1), name="EMA10"))
-fig.add_trace(go.Scatter(x=data.index, y=data["EMA20"], line=dict(color='purple', width=1), name="EMA20"))
+fig.add_trace(go.Scatter(x=data.index, y=data["EMA10"], mode="lines", line=dict(color="blue"), name="EMA10"))
+fig.add_trace(go.Scatter(x=data.index, y=data["EMA20"], mode="lines", line=dict(color="purple"), name="EMA20"))
 
-# 加入成交量（次圖）
+# 成交量放底下
 fig.update_layout(
-    title=f"{symbol} - 1H K 線圖（含 EMA10 / EMA20）",
-    xaxis_title="時間",
-    yaxis_title="價格",
     xaxis_rangeslider_visible=False,
-    template="plotly_white",
+    yaxis_title="價格",
+    margin=dict(l=10, r=10, t=40, b=10),
     height=600
 )
 
-# 成交量圖（疊在下方）
-fig.update_layout(
-    margin=dict(l=30, r=30, t=60, b=20),
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-)
-
 st.plotly_chart(fig, use_container_width=True)
+
+st.markdown("---")
+st.subheader("📊 成交量")
+st.bar_chart(data["Volume"])
