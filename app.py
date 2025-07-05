@@ -13,16 +13,17 @@ data = yf.download(symbol, period="3mo")
 data["MA7"] = data["Close"].rolling(7).mean()
 data["MA30"] = data["Close"].rolling(30).mean()
 
-price_now = data["Close"].iloc[-1]
-ma7 = data["MA7"].iloc[-1]
-ma30 = data["MA30"].iloc[-1]
+# 抓最近有價的收盤價
+price_now = data["Close"].dropna().iloc[-1] if not data["Close"].dropna().empty else None
+ma7 = data["MA7"].iloc[-1] if not data["MA7"].dropna().empty else None
+ma30 = data["MA30"].iloc[-1] if not data["MA30"].dropna().empty else None
 
-if pd.notna(price_now):
+if price_now is not None:
     st.subheader(f"現價：{price_now:.2f}")
 else:
-    st.warning("⚠️ 無法取得價格資料，請稍後再試")
+    st.warning("⚠️ 無法取得價格資料")
 
-if pd.notna(ma7) and pd.notna(ma30):
+if (ma7 is not None) and (ma30 is not None) and (price_now is not None):
     if ma7 > ma30:
         direction = "做多 📈"
         entry = price_now
@@ -37,16 +38,17 @@ if pd.notna(ma7) and pd.notna(ma30):
         st.error("📉 建議：做空")
     else:
         direction = "觀望"
-        entry = stop = take = None
         st.warning("⚠️ 建議：觀望")
-
-    if direction != "觀望":
-        st.write(f"進場價位：{entry:.2f}")
-        st.write(f"止損點：{stop:.2f}")
-        st.write(f"出場點：{take:.2f}")
 else:
+    direction = "觀望"
     st.warning("⚠️ 尚未形成完整均線判斷，請稍後再試")
 
+if direction != "觀望" and price_now is not None:
+    st.write(f"進場價位：{entry:.2f}")
+    st.write(f"止損點：{stop:.2f}")
+    st.write(f"出場點：{take:.2f}")
+
+# 畫圖
 st.subheader("價格走勢圖")
 fig, ax = plt.subplots()
 ax.plot(data.index, data["Close"], label="Close")
