@@ -1,6 +1,5 @@
-
 streamlit
 pandas
 plotly
-requests
 pandas_ta
+setuptools==65.5.0
