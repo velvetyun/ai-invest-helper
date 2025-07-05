@@ -4,8 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-st.set_page_config(page_title="AI 投資助手 v7", layout="wide")
-st.title("📊 AI 投資助手 v7")
+st.set_page_config(page_title="AI 投資助手 v7.1", layout="wide")
+st.title("📊 AI 投資助手 v7.1")
 st.caption("依成交量與趨勢，推薦最適合的技術分析策略 + 專屬圖卡")
 
 # 選擇標的與時間週期
@@ -20,11 +20,12 @@ data["RSI"] = 100 - (100 / (1 + data["Close"].pct_change().add(1).rolling(14).ap
 data["MACD"] = data["Close"].ewm(span=12).mean() - data["Close"].ewm(span=26).mean()
 data["MACD_Signal"] = data["MACD"].ewm(span=9).mean()
 
-# 自動策略推薦
+# 抓單一數值進行比較
+vol_now = data["Volume"].dropna().iloc[-1]
+vol_ma = data["VolumeMA"].dropna().iloc[-1]
 ema_diff = data["EMA10"].iloc[-1] - data["EMA20"].iloc[-1]
-vol_now = data["Volume"].iloc[-1]
-vol_ma = data["VolumeMA"].iloc[-1]
 
+# 策略推薦邏輯
 suggested_strategies = []
 
 if vol_now > vol_ma:
