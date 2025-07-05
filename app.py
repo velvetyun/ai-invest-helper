@@ -4,9 +4,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="AI 投資助手 v7.4.2", layout="wide")
-st.title("📊 AI 投資助手 v7.4.2")
-st.caption("修正 Volume Profile 維度錯誤 + 支撐壓力線分析")
+st.set_page_config(page_title="AI 投資助手 v7.4.3", layout="wide")
+st.title("📊 AI 投資助手 v7.4.3")
+st.caption("最穩定修正：Volume Profile 維度錯誤 + SR 支撐壓力線")
 
 # ➤ 使用者輸入標的
 symbol = st.text_input("輸入標的（如 BTC-USD、2330.TW、AAPL）", value="BTC-USD")
@@ -32,23 +32,31 @@ price_min = df["Low"].min()
 price_max = df["High"].max()
 bins = np.linspace(price_min, price_max, bin_size)
 
-# ✅ 修正版：處理 NaN，維度正確對應
-close_clean = df["Close"].dropna()
-cut_bins = pd.cut(close_clean, bins=bins)
-volume_profile = pd.DataFrame({
-    "bin": cut_bins,
-    "volume": df.loc[close_clean.index, "Volume"]
-})
-vol_dist = volume_profile.groupby("bin")["volume"].sum()
+# ✅ 最終穩定修正版本
+close_series = df["Close"].dropna()
+close_clean = close_series.values.flatten()  # 確保為一維
 
-# 畫圖
-fig, ax = plt.subplots(figsize=(5, 6))
-labels = [f"{interval.left:.2f}-{interval.right:.2f}" for interval in vol_dist.index]
-ax.barh(labels, vol_dist.values, color="skyblue")
-ax.invert_yaxis()
-ax.set_xlabel("成交量")
-ax.set_ylabel("價格區間")
-st.pyplot(fig)
+try:
+    cut_bins = pd.cut(close_clean, bins=bins)
+    volume_clean = df.loc[close_series.index, "Volume"].values
+
+    volume_profile = pd.DataFrame({
+        "bin": cut_bins,
+        "volume": volume_clean
+    })
+    vol_dist = volume_profile.groupby("bin")["volume"].sum()
+
+    # 畫圖
+    fig, ax = plt.subplots(figsize=(5, 6))
+    labels = [f"{interval.left:.2f}-{interval.right:.2f}" for interval in vol_dist.index]
+    ax.barh(labels, vol_dist.values, color="skyblue")
+    ax.invert_yaxis()
+    ax.set_xlabel("成交量")
+    ax.set_ylabel("價格區間")
+    st.pyplot(fig)
+
+except Exception as e:
+    st.error(f"📉 Volume Profile 計算失敗：{str(e)}")
 
 # =======================
 # 🧱 自動支撐壓力線（SR）
