@@ -14,15 +14,28 @@ data["MA7"] = data["Close"].rolling(7).mean()
 data["MA30"] = data["Close"].rolling(30).mean()
 
 # 抓最近有價的收盤價
-price_now = data["Close"].dropna().iloc[-1] if not data["Close"].dropna().empty else None
-ma7 = data["MA7"].iloc[-1] if not data["MA7"].dropna().empty else None
-ma30 = data["MA30"].iloc[-1] if not data["MA30"].dropna().empty else None
+try:
+    price_now = float(data["Close"].dropna().iloc[-1])
+except Exception:
+    price_now = None
 
+try:
+    ma7 = float(data["MA7"].dropna().iloc[-1])
+except Exception:
+    ma7 = None
+
+try:
+    ma30 = float(data["MA30"].dropna().iloc[-1])
+except Exception:
+    ma30 = None
+
+# 顯示現價
 if price_now is not None:
     st.subheader(f"現價：{price_now:.2f}")
 else:
     st.warning("⚠️ 無法取得價格資料")
 
+# 策略判斷
 if (ma7 is not None) and (ma30 is not None) and (price_now is not None):
     if ma7 > ma30:
         direction = "做多 📈"
