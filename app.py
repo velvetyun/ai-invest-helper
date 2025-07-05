@@ -4,9 +4,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="AI 投資助手 v7.4", layout="wide")
-st.title("📊 AI 投資助手 v7.4")
-st.caption("支援成交量分佈圖 + 自動偵測支撐壓力線（SR）")
+st.set_page_config(page_title="AI 投資助手 v7.4.1", layout="wide")
+st.title("📊 AI 投資助手 v7.4.1")
+st.caption("修復 Volume Profile 錯誤 + 自動支撐壓力分析")
 
 # ➤ 使用者輸入標的
 symbol = st.text_input("輸入標的（如 BTC-USD、2330.TW、AAPL）", value="BTC-USD")
@@ -32,12 +32,18 @@ price_min = df["Low"].min()
 price_max = df["High"].max()
 bins = np.linspace(price_min, price_max, bin_size)
 
-volume_profile = pd.cut(df["Close"], bins=bins).to_frame()
-volume_profile["Volume"] = df["Volume"].values
-vol_dist = volume_profile.groupby("Close")["Volume"].sum()
+# ✅ 修正版本：正確分箱與 Volume 加總
+cut_bins = pd.cut(df["Close"], bins=bins)
+volume_profile = pd.DataFrame({
+    "bin": cut_bins,
+    "volume": df["Volume"]
+})
+vol_dist = volume_profile.groupby("bin")["volume"].sum()
 
+# 畫圖
 fig, ax = plt.subplots(figsize=(5, 6))
-ax.barh(vol_dist.index.astype(str), vol_dist.values, color="skyblue")
+labels = [f"{interval.left:.2f}-{interval.right:.2f}" for interval in vol_dist.index]
+ax.barh(labels, vol_dist.values, color="skyblue")
 ax.invert_yaxis()
 ax.set_xlabel("成交量")
 ax.set_ylabel("價格區間")
