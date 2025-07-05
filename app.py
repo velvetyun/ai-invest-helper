@@ -37,7 +37,7 @@ close_series = df["Close"].dropna()
 close_clean = close_series.values.flatten()  # 確保為一維
 
 try:
-    cut_bins = pd.cut(close_clean, bins=bins)
+    cut_bins = pd.cut(np.array(close_clean).ravel(), bins=bins)
     volume_clean = df.loc[close_series.index, "Volume"].values
 
     volume_profile = pd.DataFrame({
@@ -66,6 +66,7 @@ st.subheader("🧱 自動偵測支撐與壓力線（SR）")
 def detect_sr_levels(data, window=10, tolerance=0.01):
     support, resistance = [], []
     for i in range(window, len(data) - window):
+        if i - window <= 0 or i + window >= len(data): continue
         low = data["Low"].iloc[i]
         high = data["High"].iloc[i]
 
