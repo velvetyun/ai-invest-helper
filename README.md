@@ -1,1 +1,1 @@
-# ai-invest-helper-
+# ai-invest-helper
