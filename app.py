@@ -4,9 +4,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="AI 投資助手 v7.4.1", layout="wide")
-st.title("📊 AI 投資助手 v7.4.1")
-st.caption("修復 Volume Profile 錯誤 + 自動支撐壓力分析")
+st.set_page_config(page_title="AI 投資助手 v7.4.2", layout="wide")
+st.title("📊 AI 投資助手 v7.4.2")
+st.caption("修正 Volume Profile 維度錯誤 + 支撐壓力線分析")
 
 # ➤ 使用者輸入標的
 symbol = st.text_input("輸入標的（如 BTC-USD、2330.TW、AAPL）", value="BTC-USD")
@@ -32,11 +32,12 @@ price_min = df["Low"].min()
 price_max = df["High"].max()
 bins = np.linspace(price_min, price_max, bin_size)
 
-# ✅ 修正版本：正確分箱與 Volume 加總
-cut_bins = pd.cut(df["Close"], bins=bins)
+# ✅ 修正版：處理 NaN，維度正確對應
+close_clean = df["Close"].dropna()
+cut_bins = pd.cut(close_clean, bins=bins)
 volume_profile = pd.DataFrame({
     "bin": cut_bins,
-    "volume": df["Volume"]
+    "volume": df.loc[close_clean.index, "Volume"]
 })
 vol_dist = volume_profile.groupby("bin")["volume"].sum()
 
