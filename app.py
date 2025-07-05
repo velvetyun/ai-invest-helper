@@ -1,99 +1,51 @@
 import streamlit as st
 import yfinance as yf
+import plotly.graph_objects as go
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="AI 投資助手 v7.4.3", layout="wide")
-st.title("📊 AI 投資助手 v7.4.3")
-st.caption("最穩定修正：Volume Profile 維度錯誤 + SR 支撐壓力線")
+st.set_page_config(page_title="AI 投資助手 v7.5.1", layout="wide")
+st.title("📊 BTC 互動式 K 線圖（TradingView 風格）")
 
-# ➤ 使用者輸入標的
-symbol = st.text_input("輸入標的（如 BTC-USD、2330.TW、AAPL）", value="BTC-USD")
+# 抓取 BTC-USD 的 1 小時 K 線資料
+symbol = st.selectbox("選擇標的", ["BTC-USD", "ETH-USD", "AAPL", "2330.TW"])
+data = yf.download(symbol, period="7d", interval="1h")
 
-# ➤ 抓資料
-try:
-    df = yf.download(symbol, period="3mo", interval="1d")
-except:
-    st.error("資料載入失敗")
-    st.stop()
+# 計算 EMA10 / EMA20
+data["EMA10"] = data["Close"].ewm(span=10).mean()
+data["EMA20"] = data["Close"].ewm(span=20).mean()
 
-# ➤ 技術指標
-df["EMA10"] = df["Close"].ewm(span=10).mean()
-df["EMA20"] = df["Close"].ewm(span=20).mean()
+# 建立 K 線圖
+fig = go.Figure()
 
-# =======================
-# 📊 成交量分佈圖 (Volume Profile)
-# =======================
-st.subheader("📊 成交量分佈圖（Volume Profile）")
+fig.add_trace(go.Candlestick(
+    x=data.index,
+    open=data['Open'],
+    high=data['High'],
+    low=data['Low'],
+    close=data['Close'],
+    name='K線',
+    increasing_line_color='green',
+    decreasing_line_color='red'
+))
 
-bin_size = st.slider("價格分箱數（區間分段）", 20, 100, 40)
-price_min = df["Low"].min()
-price_max = df["High"].max()
-bins = np.linspace(price_min, price_max, bin_size)
+# 加入 EMA 線
+fig.add_trace(go.Scatter(x=data.index, y=data["EMA10"], line=dict(color='blue', width=1), name="EMA10"))
+fig.add_trace(go.Scatter(x=data.index, y=data["EMA20"], line=dict(color='purple', width=1), name="EMA20"))
 
-# ✅ 最終穩定修正版本
-close_series = df["Close"].dropna()
-close_clean = close_series.values.flatten()  # 確保為一維
+# 加入成交量（次圖）
+fig.update_layout(
+    title=f"{symbol} - 1H K 線圖（含 EMA10 / EMA20）",
+    xaxis_title="時間",
+    yaxis_title="價格",
+    xaxis_rangeslider_visible=False,
+    template="plotly_white",
+    height=600
+)
 
-try:
-    cut_bins = pd.cut(np.array(close_clean).ravel(), bins=bins)
-    volume_clean = df.loc[close_series.index, "Volume"].values
+# 成交量圖（疊在下方）
+fig.update_layout(
+    margin=dict(l=30, r=30, t=60, b=20),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+)
 
-    volume_profile = pd.DataFrame({
-        "bin": cut_bins,
-        "volume": volume_clean
-    })
-    vol_dist = volume_profile.groupby("bin")["volume"].sum()
-
-    # 畫圖
-    fig, ax = plt.subplots(figsize=(5, 6))
-    labels = [f"{interval.left:.2f}-{interval.right:.2f}" for interval in vol_dist.index]
-    ax.barh(labels, vol_dist.values, color="skyblue")
-    ax.invert_yaxis()
-    ax.set_xlabel("成交量")
-    ax.set_ylabel("價格區間")
-    st.pyplot(fig)
-
-except Exception as e:
-    st.error(f"📉 Volume Profile 計算失敗：{str(e)}")
-
-# =======================
-# 🧱 自動支撐壓力線（SR）
-# =======================
-st.subheader("🧱 自動偵測支撐與壓力線（SR）")
-
-def detect_sr_levels(data, window=10, tolerance=0.01):
-    support, resistance = [], []
-    for i in range(window, len(data) - window):
-        if i - window <= 0 or i + window >= len(data): continue
-        low = data["Low"].iloc[i]
-        high = data["High"].iloc[i]
-
-        is_support = all(low < data["Low"].iloc[i - j] for j in range(1, window)) and                      all(low < data["Low"].iloc[i + j] for j in range(1, window))
-        is_resistance = all(high > data["High"].iloc[i - j] for j in range(1, window)) and                         all(high > data["High"].iloc[i + j] for j in range(1, window))
-
-        if is_support:
-            if not any(abs(low - s) < tolerance * s for s in support):
-                support.append(low)
-        if is_resistance:
-            if not any(abs(high - r) < tolerance * r for r in resistance):
-                resistance.append(high)
-
-    return support, resistance
-
-support, resistance = detect_sr_levels(df)
-
-# ➤ 畫出 SR 水平線
-fig2, ax2 = plt.subplots(figsize=(10, 4))
-ax2.plot(df.index, df["Close"], label="Close", linewidth=1.5)
-
-for s in support:
-    ax2.axhline(s, color="green", linestyle="--", alpha=0.5)
-for r in resistance:
-    ax2.axhline(r, color="red", linestyle="--", alpha=0.5)
-
-ax2.set_title(f"{symbol} 支撐（綠）與壓力（紅）線")
-ax2.legend()
-fig2.autofmt_xdate()
-st.pyplot(fig2)
+st.plotly_chart(fig, use_container_width=True)

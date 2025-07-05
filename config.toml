@@ -1,0 +1,16 @@
+[server]
+headless = true
+runOnSave = true
+
+[client]
+showErrorDetails = true
+toolbarMode = "minimal"
+
+[theme]
+base = "light"
+
+[logger]
+level = "info"
+
+[browser]
+gatherUsageStats = false
