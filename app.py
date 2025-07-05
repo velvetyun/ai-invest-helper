@@ -4,8 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-st.set_page_config(page_title="AI 投資助手 v7.1", layout="wide")
-st.title("📊 AI 投資助手 v7.1")
+st.set_page_config(page_title="AI 投資助手 v7.2", layout="wide")
+st.title("📊 AI 投資助手 v7.2")
 st.caption("依成交量與趨勢，推薦最適合的技術分析策略 + 專屬圖卡")
 
 # 選擇標的與時間週期
@@ -20,30 +20,54 @@ data["RSI"] = 100 - (100 / (1 + data["Close"].pct_change().add(1).rolling(14).ap
 data["MACD"] = data["Close"].ewm(span=12).mean() - data["Close"].ewm(span=26).mean()
 data["MACD_Signal"] = data["MACD"].ewm(span=9).mean()
 
-# 抓單一數值進行比較
-vol_now = data["Volume"].dropna().iloc[-1]
-vol_ma = data["VolumeMA"].dropna().iloc[-1]
-ema_diff = data["EMA10"].iloc[-1] - data["EMA20"].iloc[-1]
-
-# 策略推薦邏輯
+# 準備推薦策略
 suggested_strategies = []
 
-if vol_now > vol_ma:
-    suggested_strategies.append("HA（成交量放大）")
-if ema_diff > 0:
-    suggested_strategies.extend(["RSI（上升趨勢）", "SR（支撐壓力）"])
-elif ema_diff < 0:
-    suggested_strategies.extend(["FR（下跌回撤）", "RD（風險區偵測）"])
-if data["RSI"].iloc[-1] > 70 or data["RSI"].iloc[-1] < 30:
-    suggested_strategies.append("RSI（超買超賣）")
-if data["MACD"].iloc[-1] > data["MACD_Signal"].iloc[-1]:
-    suggested_strategies.append("MACD（多頭交叉）")
-else:
-    suggested_strategies.append("MACD（空頭交叉）")
+# 成交量策略判斷（含錯誤處理）
+try:
+    vol_now = float(data["Volume"].dropna().iloc[-1])
+    vol_ma = float(data["VolumeMA"].dropna().iloc[-1])
+    if vol_now > vol_ma:
+        suggested_strategies.append("HA（成交量放大）")
+except Exception as e:
+    st.warning(f"⚠️ 成交量比較失敗：{e}")
 
+# EMA 趨勢判斷
+try:
+    ema_diff = float(data["EMA10"].dropna().iloc[-1] - data["EMA20"].dropna().iloc[-1])
+    if ema_diff > 0:
+        suggested_strategies.extend(["RSI（上升趨勢）", "SR（支撐壓力）"])
+    elif ema_diff < 0:
+        suggested_strategies.extend(["FR（下跌回撤）", "RD（風險區偵測）"])
+except Exception as e:
+    st.warning(f"⚠️ EMA 比較失敗：{e}")
+
+# RSI 判斷
+try:
+    rsi_now = float(data["RSI"].dropna().iloc[-1])
+    if rsi_now > 70 or rsi_now < 30:
+        suggested_strategies.append("RSI（超買超賣）")
+except Exception as e:
+    st.warning(f"⚠️ RSI 計算失敗：{e}")
+
+# MACD 判斷
+try:
+    macd = float(data["MACD"].dropna().iloc[-1])
+    macd_signal = float(data["MACD_Signal"].dropna().iloc[-1])
+    if macd > macd_signal:
+        suggested_strategies.append("MACD（多頭交叉）")
+    else:
+        suggested_strategies.append("MACD（空頭交叉）")
+except Exception as e:
+    st.warning(f"⚠️ MACD 計算失敗：{e}")
+
+# 顯示策略推薦
 st.subheader("🤖 系統推薦策略")
-for s in suggested_strategies:
-    st.markdown(f"✔️ {s}")
+if suggested_strategies:
+    for s in suggested_strategies:
+        st.markdown(f"✔️ {s}")
+else:
+    st.warning("⚠️ 無法根據目前資料自動推薦策略，請稍後再試")
 
 # 顯示圖卡
 st.subheader("🧭 策略圖卡")
